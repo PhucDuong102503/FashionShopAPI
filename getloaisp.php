@@ -1,8 +1,7 @@
 <?php
-//lấy dữ liệu trong bảng thể loại sản phẩm
 include 'connect.php';
 
-// Định nghĩa class Loaisp đúng tên thuộc tính và hàm khởi tạo
+// Định nghĩa class Loaisp
 class Loaisp {
     public $id;
     public $tenloaisanpham;
@@ -15,10 +14,31 @@ class Loaisp {
     }
 }
 
-$query = "SELECT * FROM loaisanpham";//câu lệnh truy vấn
-$data = mysqli_query($conn, $query);//thực thi câu lệnh truy vấn
+// Truy vấn bảng loaisanpham
+$query = "SELECT * FROM loaisanpham";
+$data = mysqli_query($conn, $query);
 $mangloaisp = array();
-while ($row = mysqli_fetch_assoc($data)) {//lấy dữ liệu từ data theo từng dòng và trả về mảng
-    array_push($mangloaisp, new Loaisp($row['id'], $row['tenloaisanpham'], $row['hinhloaisanpham'])); //đưa dữ liệu vào mảng $mangloaisp
+
+while ($row = mysqli_fetch_assoc($data)) {
+    $mangloaisp[] = new Loaisp($row['id'], $row['tenloaisanpham'], $row['hinhloaisanpham']);
 }
-echo json_encode($mangloaisp);//chuyển định dạng dữ liệu sang json
+
+// Kiểm tra và tạo phản hồi JSON
+if (!empty($mangloaisp)) {
+    $arr = [
+        'success' => true,
+        'message' => 'thanh cong',
+        'result'  => $mangloaisp
+    ];
+} else {
+    $arr = [
+        'success' => false,
+        'message' => 'khong co du lieu',
+        'result'  => []
+    ];
+}
+
+// Xuất ra JSON
+header('Content-Type: application/json');
+echo json_encode($arr, JSON_UNESCAPED_UNICODE);
+?>

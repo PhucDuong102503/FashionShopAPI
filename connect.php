@@ -8,8 +8,13 @@ $db = "thoitrang";
 // Tạo kết nối
 $conn = mysqli_connect($host, $u, $p, $db);
 mysqli_query($conn, "SET NAMES 'utf8'");
-if (!$conn) {
-    die("Kết nối thất bại: " . mysqli_connect_error());
-} 
+
+
+// Kiểm tra kết nối
+// if (!$conn) {
+//     die("Ket noi that bai: " . mysqli_connect_error());
+// } else {
+//     echo "Ket noi thanh cong";
+// }
 ?>
 
