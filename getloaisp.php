@@ -42,3 +42,4 @@ if (!empty($mangloaisp)) {
 header('Content-Type: application/json');
 echo json_encode($arr, JSON_UNESCAPED_UNICODE);
 ?>
+
