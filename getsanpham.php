@@ -3,95 +3,62 @@ include 'connect.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Lấy và validate input
-$page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
-if ($page < 1) $page = 1;
-$total = 5; // số item trên 1 trang
-$pos = ($page - 1) * $total;
+// nhận param từ GET hoặc POST
+$request = array_merge($_GET, $_POST);
 
-if (!isset($_POST['idloaisanpham'])) {
+// phân trang
+$page = isset($request['page']) ? (int)$request['page'] : 1;
+if ($page < 1) $page = 1;
+$per_page = 5;
+$offset = ($page - 1) * $per_page;
+
+// lấy id loại sản phẩm
+if (isset($request['idloaisanpham'])) {
+    $cat = (int)$request['idloaisanpham'];
+} else {
     echo json_encode(['success' => false, 'message' => 'Thiếu tham số idloaisanpham', 'result' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }
-$idloaisanpham = (int)$_POST['idloaisanpham'];
 
-// Tạo base_url động (nếu muốn, thay bằng IP/domain cố định)
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-$base_url = $scheme . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
-if (empty($base_url)) {
-    $base_url = 'http://localhost/FashionShop/';
-}
+// truy vấn với offset, limit
+$cat = (int)$cat;
+$offset = (int)$offset;
+$limit = (int)$per_page;
 
-// Sử dụng prepared statement để an toàn
-$stmt = $conn->prepare("SELECT id, tensanpham, giasanpham, hinhanhsanpham, motasanpham, idloaisanpham FROM sanpham WHERE idloaisanpham = ? LIMIT ?, ?");
-if (!$stmt) {
-    echo json_encode(['success' => false, 'message' => 'Lỗi chuẩn bị truy vấn: ' . $conn->error, 'result' => []], JSON_UNESCAPED_UNICODE);
+$query = "SELECT id, tensanpham, giasanpham, hinhanhsanpham, motasanpham, idloaisanpham
+          FROM sanpham
+          WHERE idloaisanpham = $cat
+          LIMIT $offset, $limit";
+
+$res = mysqli_query($conn, $query);
+if (!$res) {
+    echo json_encode(['success' => false, 'message' => 'Lỗi truy vấn: '.mysqli_error($conn), 'result' => []], JSON_UNESCAPED_UNICODE);
+    mysqli_close($conn);
     exit;
 }
 
-$stmt->bind_param('iii', $idloaisanpham, $pos, $total);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$mangspmoinhat = [];
-
-while ($row = $result->fetch_assoc()) {
-    // Xử lý đường dẫn ảnh
-    $hinhanh = isset($row['hinhanhsanpham']) ? trim($row['hinhanhsanpham']) : '';
-    if ($hinhanh === '' || $hinhanh === null) {
-        $hinhanh = $base_url . 'uploads/no_image.png'; // ảnh mặc định nếu rỗng
-    } elseif (!preg_match('/^https?:\/\//i', $hinhanh)) {
-        // nếu là đường dẫn tương đối trong server, gắn base_url
-        $hinhanh = $base_url . ltrim($hinhanh, '/');
-    }
-
-    $mangspmoinhat[] = new Sanphammoinhat(
-        (int)$row['id'],
-        $row['tensanpham'],
-        $row['giasanpham'],
-        $hinhanh,
-        $row['motasanpham'],
-        (int)$row['idloaisanpham']
-    );
-}
-
-if (!empty($mangspmoinhat)) {
-    $arr = [
-        'success' => true,
-        'message' => 'Lấy sản phẩm thành công',
-        'result'  => $mangspmoinhat
-    ];
-} else {
-    $arr = [
-        'success' => false,
-        'message' => 'Không có sản phẩm',
-        'result'  => []
+$items = [];
+while ($row = mysqli_fetch_assoc($res)) {
+    $items[] = [
+        'id' => (string)$row['id'],
+        'tensanpham' => (string)$row['tensanpham'],
+        'giasanpham' => (string)$row['giasanpham'],
+        'hinhanhsanpham' => (string)$row['hinhanhsanpham'],
+        'motasanpham' => (string)$row['motasanpham'],
+        'idloaisanpham' => (string)$row['idloaisanpham']
     ];
 }
 
-echo json_encode($arr, JSON_UNESCAPED_UNICODE);
+$response = [
+    'success' => !empty($items),
+    'message' => !empty($items) ? 'Lấy sản phẩm mới nhất thành công' : 'Không có sản phẩm',
+    'current_page' => $page,
+    'per_page' => $per_page,
+    'result' => $items
+];
 
-$stmt->close();
-$conn->close();
+echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-// Model class
-class Sanphammoinhat
-{
-    public $id;
-    public $tensanpham;
-    public $giasanpham;
-    public $hinhanhsanpham;
-    public $motasanpham;
-    public $idloaisanpham;
-
-    function __construct($id, $tensanpham, $giasanpham, $hinhanhsanpham, $motasanpham, $idloaisanpham)
-    {
-        $this->id = $id;
-        $this->tensanpham = $tensanpham;
-        $this->giasanpham = $giasanpham;
-        $this->hinhanhsanpham = $hinhanhsanpham;
-        $this->motasanpham = $motasanpham;
-        $this->idloaisanpham = $idloaisanpham;
-    }
-}
+mysqli_free_result($res);
+mysqli_close($conn);
 ?>
