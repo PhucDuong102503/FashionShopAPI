@@ -9,20 +9,20 @@ $request = array_merge($_GET, $_POST, is_array($json) ? $json : []);
 
 // Chỉ cho phép POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Phải dùng POST'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'message' => 'Phương thức không hợp lệ'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $user_input = isset($request['tendangnhap']) ? trim($request['tendangnhap']) : '';
 $matkhau    = isset($request['matkhau']) ? trim($request['matkhau']) : '';
 
-if ($user_input === '' || $matkhau === '') {
-    echo json_encode(['success' => false, 'message' => 'Thiếu tài khoản hoặc mật khẩu'], JSON_UNESCAPED_UNICODE);
+if (empty($user_input) || empty($matkhau)) {
+    echo json_encode(['success' => false, 'message' => 'Vui lòng nhập tài khoản và mật khẩu'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// ⭐ 1. SỬA CÂU SQL: Thêm 'hinhanh' vào danh sách cột cần lấy
-$sql = "SELECT id, tendangnhap, matkhau, hoten, sodienthoai, email, diachi, hinhanh, role_id 
+// ⭐ 1. SỬA CÂU SQL: Thêm cột 'banned' vào danh sách các cột cần lấy
+$sql = "SELECT id, tendangnhap, matkhau, hoten, sodienthoai, email, diachi, hinhanh, role_id, banned 
         FROM `user`
         WHERE tendangnhap = ? OR email = ?
         LIMIT 1";
@@ -45,9 +45,17 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-$stored_password = $user['matkhau'] ?? '';
+// ⭐ 2. THÊM LOGIC KIỂM TRA BANNED
+// Kiểm tra ngay sau khi lấy được thông tin người dùng
+if (isset($user['banned']) && $user['banned'] == 1) {
+    echo json_encode(['success' => false, 'message' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'], JSON_UNESCAPED_UNICODE);
+    $conn->close();
+    exit; // Dừng thực thi ngay lập tức
+}
 
-// Kiểm tra mật khẩu (Logic này của bạn rất tốt, giữ nguyên)
+
+// --- Logic kiểm tra mật khẩu của bạn (giữ nguyên, đã rất tốt) ---
+$stored_password = $user['matkhau'] ?? '';
 $password_ok = false;
 if (!empty($stored_password) && password_verify($matkhau, $stored_password)) {
     $password_ok = true;
@@ -67,8 +75,10 @@ if (!$password_ok) {
     $conn->close();
     exit;
 }
+// --- Hết logic kiểm tra mật khẩu ---
 
-// ⭐ 2. SỬA DỮ LIỆU TRẢ VỀ: Thêm 'hinhanh' vào mảng response
+
+// Dữ liệu trả về nếu đăng nhập thành công
 $response_user = [
     'id'          => (string)$user['id'],
     'tendangnhap' => (string)$user['tendangnhap'],
@@ -76,7 +86,7 @@ $response_user = [
     'sodienthoai' => (string)$user['sodienthoai'],
     'email'       => (string)$user['email'],
     'diachi'      => (string)$user['diachi'],
-    'hinhanh'     => $user['hinhanh'], // Thêm dòng này
+    'hinhanh'     => $user['hinhanh'],
     'role_id'     => (string)$user['role_id']
 ];
 
@@ -87,4 +97,3 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 
 $conn->close();
-?>

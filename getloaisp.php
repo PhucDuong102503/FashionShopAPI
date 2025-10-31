@@ -2,12 +2,14 @@
 include 'connect.php';
 
 // Định nghĩa class Loaisp
-class Loaisp {
+class Loaisp
+{
     public $id;
     public $tenloaisanpham;
     public $hinhloaisanpham;
 
-    function __construct($id, $tenloaisanpham, $hinhloaisanpham) {
+    function __construct($id, $tenloaisanpham, $hinhloaisanpham)
+    {
         $this->id = $id;
         $this->tenloaisanpham = $tenloaisanpham;
         $this->hinhloaisanpham = $hinhloaisanpham;
@@ -41,5 +43,3 @@ if (!empty($mangloaisp)) {
 // Xuất ra JSON
 header('Content-Type: application/json');
 echo json_encode($arr, JSON_UNESCAPED_UNICODE);
-?>
-

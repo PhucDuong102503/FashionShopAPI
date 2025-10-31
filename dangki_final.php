@@ -62,4 +62,3 @@ if ($stmt_insert->execute()) {
 
 $stmt_insert->close();
 $conn->close();
-?>

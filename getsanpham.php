@@ -32,7 +32,7 @@ $query = "SELECT id, tensanpham, giasanpham, hinhanhsanpham, motasanpham, idloai
 
 $res = mysqli_query($conn, $query);
 if (!$res) {
-    echo json_encode(['success' => false, 'message' => 'Lỗi truy vấn: '.mysqli_error($conn), 'result' => []], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'message' => 'Lỗi truy vấn: ' . mysqli_error($conn), 'result' => []], JSON_UNESCAPED_UNICODE);
     mysqli_close($conn);
     exit;
 }
@@ -61,4 +61,3 @@ echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 mysqli_free_result($res);
 mysqli_close($conn);
-?>
