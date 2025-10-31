@@ -3,32 +3,24 @@ include 'connect.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// nhận param từ GET hoặc POST
+// Lấy tham số từ request
 $request = array_merge($_GET, $_POST);
-
-// phân trang
 $page = isset($request['page']) ? (int)$request['page'] : 1;
 if ($page < 1) $page = 1;
 $per_page = 5;
 $offset = ($page - 1) * $per_page;
 
-// lấy id loại sản phẩm
-if (isset($request['idloaisanpham'])) {
-    $cat = (int)$request['idloaisanpham'];
-} else {
+if (!isset($request['idloaisanpham'])) {
     echo json_encode(['success' => false, 'message' => 'Thiếu tham số idloaisanpham', 'result' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }
+$cat = (int)$request['idloaisanpham'];
 
-// truy vấn với offset, limit
-$cat = (int)$cat;
-$offset = (int)$offset;
-$limit = (int)$per_page;
-
+// Truy vấn với offset và limit
 $query = "SELECT id, tensanpham, giasanpham, hinhanhsanpham, motasanpham, idloaisanpham
           FROM sanpham
           WHERE idloaisanpham = $cat
-          LIMIT $offset, $limit";
+          LIMIT $offset, $per_page"; // Sửa $limit thành $per_page cho nhất quán
 
 $res = mysqli_query($conn, $query);
 if (!$res) {
@@ -37,13 +29,23 @@ if (!$res) {
     exit;
 }
 
+// ⭐ SỬA LẠI: Tự động lấy URL gốc của server
+$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . "/FashionShop/";
+
 $items = [];
 while ($row = mysqli_fetch_assoc($res)) {
+    $hinhanh = trim($row['hinhanhsanpham']);
+
+    // ⭐ LOGIC QUAN TRỌNG: Nếu đường dẫn ảnh không phải là URL đầy đủ, hãy nối nó với URL gốc
+    if (!empty($hinhanh) && !preg_match('/^https?:\/\//', $hinhanh)) {
+        $hinhanh = $base_url . ltrim($hinhanh, '/');
+    }
+
     $items[] = [
         'id' => (string)$row['id'],
         'tensanpham' => (string)$row['tensanpham'],
         'giasanpham' => (string)$row['giasanpham'],
-        'hinhanhsanpham' => (string)$row['hinhanhsanpham'],
+        'hinhanhsanpham' => $hinhanh, // ✅ Dùng biến đã được xử lý
         'motasanpham' => (string)$row['motasanpham'],
         'idloaisanpham' => (string)$row['idloaisanpham']
     ];
@@ -51,7 +53,7 @@ while ($row = mysqli_fetch_assoc($res)) {
 
 $response = [
     'success' => !empty($items),
-    'message' => !empty($items) ? 'Lấy sản phẩm mới nhất thành công' : 'Không có sản phẩm',
+    'message' => !empty($items) ? 'Lấy sản phẩm thành công' : 'Không có sản phẩm',
     'current_page' => $page,
     'per_page' => $per_page,
     'result' => $items
@@ -61,3 +63,4 @@ echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 mysqli_free_result($res);
 mysqli_close($conn);
+?>

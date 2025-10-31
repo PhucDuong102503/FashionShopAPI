@@ -7,36 +7,33 @@ $data = mysqli_query($conn, $query);
 
 $mangspmoinhat = array();
 
-// URL gốc của server (đường dẫn tới thư mục chứa ảnh)
-$base_url = "http://192.168.1.106/FashionShop/"; // 👉 thay bằng domain hoặc IP thật, ví dụ: http://192.168.1.10/FashionShop/
+// Tự động lấy URL gốc của server một cách linh hoạt
+$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . "/FashionShop/";
 
 while ($row = mysqli_fetch_assoc($data)) {
-    // Lấy đường dẫn ảnh
+    // Lấy đường dẫn ảnh từ database
     $hinhanh = trim($row['hinhanhsanpham']);
 
-    // ✅ Kiểm tra và sửa lỗi đường dẫn
-    if (!preg_match('/^https?:\/\//', $hinhanh)) {
-        // Nếu ảnh không có http/https → thêm base_url vào trước
+    // LOGIC XỬ LÝ HÌNH ẢNH AN TOÀN TUYỆT ĐỐI
+    // Nếu $hinhanh không rỗng và không bắt đầu bằng 'http', nó là đường dẫn tương đối.
+    if (!empty($hinhanh) && strpos($hinhanh, 'http') !== 0) {
+        // Dùng ltrim để đảm bảo nó không có dấu '/' ở đầu trước khi nối chuỗi.
         $hinhanh = $base_url . ltrim($hinhanh, '/');
     }
-
-    // ✅ Kiểm tra file có tồn tại trên server không (nếu dùng ảnh lưu local)
-    // Nếu bạn lưu ảnh trên server (thư mục ./uploads), có thể kiểm tra như sau:
-    // if (!file_exists(__DIR__ . '/' . $row['hinhanhsanpham'])) {
-    //     $hinhanh = $base_url . 'uploads/no_image.png'; // ảnh mặc định nếu lỗi
-    // }
 
     array_push($mangspmoinhat, new Sanphammoinhat(
         $row['id'],
         $row['tensanpham'],
         $row['giasanpham'],
-        $hinhanh, // ✅ dùng biến đã xử lý
+        $hinhanh, // Dùng biến đã được xử lý
         $row['motasanpham'],
         $row['idloaisanpham']
     ));
 }
 
-// Tạo mảng phản hồi JSON
+// Trả về kết quả dưới dạng JSON
+header('Content-Type: application/json; charset=utf-8');
+
 if (!empty($mangspmoinhat)) {
     $arr = [
         'success' => true,
@@ -53,6 +50,7 @@ if (!empty($mangspmoinhat)) {
 
 echo json_encode($arr);
 
+// Class Sanphammoinhat giữ nguyên
 class Sanphammoinhat
 {
     public $id;
@@ -72,3 +70,4 @@ class Sanphammoinhat
         $this->idloaisanpham = $idloaisanpham;
     }
 }
+?>
