@@ -1,19 +1,29 @@
 <?php
 include "connect.php";
-header('Content-Type: application/json; charset=utf-8');
-
-$user_id = $_POST['user_id'] ?? 0;
-// Thêm tham số trạng thái để biết cần lấy đơn hàng loại nào
-$trangthai = $_POST['trangthai'] ?? '';
+header('Content-Type: application/json; charset=utf-8');$user_id = $_POST['user_id'] ?? 0;
+// Dùng status_id (0, 1, 2) để code sạch hơn
+$status_id = $_POST['status_id'] ?? -1;
 
 if (empty($user_id)) {
     echo json_encode(['success' => false, 'message' => 'Thiếu user_id']);
     exit();
 }
 
-if (empty($trangthai)) {
-    echo json_encode(['success' => false, 'message' => 'Thiếu trạng thái']);
-    exit();
+// Chuyển đổi status_id thành chuỗi trạng thái trong DB
+$trangthai = '';
+switch($status_id) {
+    case 0:
+        $trangthai = 'Chờ giao hàng';
+        break;
+    case 1:
+        $trangthai = 'Đã giao hàng';
+        break;
+    case 2:
+        $trangthai = 'Đã hủy đơn';
+        break;
+    default:
+        echo json_encode(['success' => false, 'message' => 'Thiếu trạng thái đơn hàng']);
+        exit();
 }
 
 $query = "SELECT * FROM `donhang` WHERE `user_id` = ? AND `trangthai` = ? ORDER BY `ngaydathang` DESC";
@@ -24,12 +34,14 @@ $result = $stmt->get_result();
 
 $mang_donhang = [];
 while ($row = $result->fetch_assoc()) {
-    // Lấy chi tiết đơn hàng
-    $query_chitiet = "SELECT T2.tensanpham, T2.hinhanhsanpham, T1.soluong, T1.gia, T3.tensize 
+    // ⭐⭐⭐ ĐÂY LÀ DÒNG QUAN TRỌNG CẦN SỬA ⭐⭐⭐
+    // Thêm T1.sanpham_id vào danh sách cột SELECT
+    $query_chitiet = "SELECT T1.sanpham_id, T2.tensanpham, T2.hinhanhsanpham, T1.soluong, T1.gia, T3.tensize 
                     FROM chitietdonhang AS T1 
                     INNER JOIN sanpham AS T2 ON T1.sanpham_id = T2.id 
                     LEFT JOIN size AS T3 ON T1.size_id = T3.id 
                     WHERE T1.donhang_id = ?";
+                    
     $stmt_chitiet = $conn->prepare($query_chitiet);
     $stmt_chitiet->bind_param("i", $row['id']);
     $stmt_chitiet->execute();
@@ -53,3 +65,4 @@ if (!empty($mang_donhang)) {
 
 $stmt->close();
 $conn->close();
+?>
