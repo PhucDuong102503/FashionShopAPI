@@ -20,7 +20,7 @@ $cat = (int)$request['idloaisanpham'];
 $query = "SELECT id, tensanpham, giasanpham, hinhanhsanpham, motasanpham, idloaisanpham
           FROM sanpham
           WHERE idloaisanpham = $cat
-          LIMIT $offset, $per_page"; // Sửa $limit thành $per_page cho nhất quán
+          LIMIT $offset, $per_page";
 
 $res = mysqli_query($conn, $query);
 if (!$res) {
@@ -29,23 +29,27 @@ if (!$res) {
     exit;
 }
 
-// ⭐ SỬA LẠI: Tự động lấy URL gốc của server
-$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'] . "/FashionShop/";
+// ⭐ TỰ ĐỘNG LẤY URL GỐC CỦA SERVER
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+$host = $_SERVER['HTTP_HOST'];
+$base_url = $protocol . $host . "/FashionShop/";
 
 $items = [];
 while ($row = mysqli_fetch_assoc($res)) {
-    $hinhanh = trim($row['hinhanhsanpham']);
+    $hinhanh_path = trim($row['hinhanhsanpham']);
+    $final_image_url = $hinhanh_path; // Mặc định
 
     // ⭐ LOGIC QUAN TRỌNG: Nếu đường dẫn ảnh không phải là URL đầy đủ, hãy nối nó với URL gốc
-    if (!empty($hinhanh) && !preg_match('/^https?:\/\//', $hinhanh)) {
-        $hinhanh = $base_url . ltrim($hinhanh, '/');
+    if (!empty($hinhanh_path) && !preg_match('/^https?:\/\//', $hinhanh_path)) {
+        $clean_path = ltrim($hinhanh_path, '/');
+        $final_image_url = $base_url . $clean_path;
     }
 
     $items[] = [
         'id' => (string)$row['id'],
         'tensanpham' => (string)$row['tensanpham'],
         'giasanpham' => (string)$row['giasanpham'],
-        'hinhanhsanpham' => $hinhanh, // ✅ Dùng biến đã được xử lý
+        'hinhanhsanpham' => $final_image_url, // ✅ Dùng biến đã được xử lý
         'motasanpham' => (string)$row['motasanpham'],
         'idloaisanpham' => (string)$row['idloaisanpham']
     ];
