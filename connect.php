@@ -17,3 +17,4 @@ mysqli_query($conn, "SET NAMES 'utf8'");
 // } else {
 //     echo "Ket noi thanh cong";
 // }
+?>

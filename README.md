@@ -1,2 +1,0 @@
-# FashionShopAPI
-API cua FashionShopApp
